@@ -1,6 +1,8 @@
 import pygame
 from pygame.locals import *
 import random
+import sys
+import copy
 
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
@@ -8,6 +10,7 @@ SCREEN_HEIGHT = 600
 GRID_WIDTH = 120
 GRID_HEIGHT = 120
 
+generation = 0
 grid = []
 
 def randomValue():
@@ -16,12 +19,18 @@ def randomValue():
     return 0
 
 for i in range(0, GRID_HEIGHT):
-    row = []
+    row = [0] * GRID_WIDTH
     for j in range(0, GRID_WIDTH):
-        row.append(randomValue())
-    grid.append(tuple(row))
+        row[j] = randomValue()
+    grid.append(row)
 
-grid = tuple(grid)
+swapGrid = []
+for i in range(0, GRID_HEIGHT):
+    row = [0] * GRID_WIDTH
+    for j in range(0, GRID_WIDTH):
+        row[j] = 0
+    swapGrid.append(row)
+
 
 
 COLOR_ALIVE = (255,255,255)
@@ -50,16 +59,15 @@ def countAliveNeighbours(grid, col, row):
             findCell(grid, col,row-1) + findCell(grid, col,row+1) +\
             findCell(grid, col + 1, row - 1) + findCell(grid, col + 1, row) + findCell(grid, col + 1, row + 1)
 
-def nextGrid(grid):
-    newGrid = []
+def nextGrid():
+    global grid, swapGrid, generation
     for colNum, row in enumerate(grid):
-        newRow = []
-        for rowNum, cell in enumerate(grid):
+        for rowNum, cell in enumerate(row):
             neighbours = countAliveNeighbours(grid, colNum, rowNum)
             alive = findCell(grid, colNum, rowNum)
-            newRow.append(decideNewValue(alive, neighbours))
-        newGrid.append(tuple(newRow))
-    return tuple(newGrid)
+            swapGrid[colNum][rowNum] = decideNewValue(alive, neighbours)
+    grid = copy.deepcopy(swapGrid)
+    generation+=1
 
 def decideNewValue(alive, neighbours):
     if neighbours == 3:
@@ -79,7 +87,7 @@ def main():
     # setup vars
     mousex = 0
     mousey = 0
-
+    frames = 0
     # make font
     fontObj = pygame.font.Font('freesansbold.ttf', 16)
 
@@ -99,11 +107,27 @@ def main():
 
 
         drawGrid(DISPLAYSURF, grid)
+        drawFPS(clock.get_fps())
+        drawGeneration()
+
         pygame.display.update()
         timer = clock.tick(60)
-        if timer > 100:
-            timer -= 100
-            grid = nextGrid(grid)
+
+        nextGrid()
+
+def drawGeneration():
+    textSurfaceObj = fontObj.render('gen: ' + str(generation), True, (255,0,0))
+    textRectObj = textSurfaceObj.get_rect()
+    textRectObj.left = 0
+    textRectObj.bottom = SCREEN_HEIGHT
+    DISPLAYSURF.blit(textSurfaceObj, textRectObj)
+
+def drawFPS(fps):
+    textSurfaceObj = fontObj.render(str(int(fps)) + ' fps', True, (255,0,0))
+    textRectObj = textSurfaceObj.get_rect()
+    textRectObj.right = SCREEN_WIDTH
+    textRectObj.bottom = SCREEN_HEIGHT
+    DISPLAYSURF.blit(textSurfaceObj, textRectObj)
 
 
 if __name__ == '__main__':
